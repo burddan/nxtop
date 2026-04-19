@@ -1,8 +1,6 @@
 # nxtop
 
-> The all-in-one top tool for Linux — everything your system is doing, in one terminal.
-
-`nxtop` is a TUI system monitor built in Rust that goes far beyond `htop`. Instead of opening five different tools to understand what your machine is doing, `nxtop` puts processes, CPU, memory, disks, network, Bluetooth, and more into a single keyboard-driven interface.
+`nxtop` is a TUI system monitor built in Rust that goes far beyond `htop`. Instead of opening five different tools to understand what your machine is doing, `nxtop` puts processes, CPU, memory, disks, network, Bluetooth, and more into a single keyboard-driven interface.`
 
 
 ## Current Features
