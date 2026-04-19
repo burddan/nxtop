@@ -4,23 +4,6 @@
 
 `nxtop` is a TUI system monitor built in Rust that goes far beyond `htop`. Instead of opening five different tools to understand what your machine is doing, `nxtop` puts processes, CPU, memory, disks, network, Bluetooth, and more into a single keyboard-driven interface.
 
-```
-┌─ nxtop ──────────────────────────────────────────────────────────────┐
-│  Processos │  Sistema │  Rede │  Disco │  Bluetooth │  USB │  GPU   │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-## Why
-
-Every tool solves one problem:
-- `htop` → processes
-- `iotop` → disk I/O
-- `nethogs` → network per process
-- `bluetoothctl` → Bluetooth
-- `df` / `lsblk` → storage
-- `nvtop` → GPU
-
-`nxtop` is all of them. One binary, one terminal, one keybinding.
 
 ## Current Features
 
@@ -43,7 +26,10 @@ Every tool solves one problem:
 
 ## Keybindings
 
-| Key | Action |
+| Key | Action |isco — mount points, usage %, read/write I/O rates per device
+Bluetooth — paired devices, connection status, RSSI, connect/disconnect
+USB — connected devices, bus/port, vendor/product info
+GPU — utilization, VRAM usage, temperature (NVIDIA + AMD)
 |---|---|
 | `Tab` / `Shift+Tab` | Next / previous tab |
 | `j` / `k` or `↓` / `↑` | Navigate list |
@@ -70,6 +56,3 @@ cargo build --release
 - [`crossterm`](https://github.com/crossterm-rs/crossterm) — terminal input/output
 - Zero system dependencies — reads directly from `/proc`, `/sys`, and kernel interfaces
 
-## License
-
-MIT
