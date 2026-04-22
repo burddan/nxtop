@@ -3,7 +3,7 @@ use std::{
     time::Instant,
 };
 use ratatui::widgets::TableState;
-use crate::proc::{self, CpuStat, MemInfo, NetSample};
+use crate::proc::{self, CpuStat, GpuInfo, MemInfo, NetSample};
 
 const HISTORY: usize = 60;
 const PAGE_BYTES: u64 = 4096;
@@ -37,8 +37,10 @@ pub struct App {
     pub filter_mode: bool,
     pub tree_mode: bool,
     pub cpu_history: Vec<VecDeque<u64>>,
+    pub gpu_history: Vec<VecDeque<u64>>,
     pub mem: MemInfo,
     pub net: Vec<NetIfaceDisplay>,
+    pub gpus: Vec<GpuInfo>,
     prev_cpu: Vec<CpuStat>,
     prev_ticks: HashMap<u32, u64>,
     prev_total: u64,
@@ -58,8 +60,10 @@ impl App {
             filter_mode: false,
             tree_mode: false,
             cpu_history: vec![VecDeque::from(vec![0u64; HISTORY]); cores],
+            gpu_history: vec![],
             mem: MemInfo::default(),
             net: vec![],
+            gpus: vec![],
             prev_cpu: cpu,
             prev_ticks: HashMap::new(),
             prev_total: 0,
@@ -78,6 +82,7 @@ impl App {
         self.update_mem();
         self.update_net(elapsed);
         self.update_procs();
+        self.update_gpus();
     }
 
     fn update_cpu(&mut self) {
@@ -119,6 +124,20 @@ impl App {
             }
         }).collect();
         self.prev_net = samples.into_iter().map(|s| (s.name.clone(), s)).collect();
+    }
+
+    fn update_gpus(&mut self) {
+        let new = proc::read_gpus();
+        while self.gpu_history.len() < new.len() {
+            self.gpu_history.push(VecDeque::from(vec![0u64; HISTORY]));
+        }
+        for (i, gpu) in new.iter().enumerate() {
+            if self.gpu_history[i].len() >= HISTORY {
+                self.gpu_history[i].pop_front();
+            }
+            self.gpu_history[i].push_back(gpu.util_pct as u64);
+        }
+        self.gpus = new;
     }
 
     fn update_procs(&mut self) {

@@ -1,4 +1,4 @@
-use std::{fs, io};
+use std::{fs, io, path::Path};
 
 #[derive(Debug, Clone, Default)]
 pub struct CpuStat {
@@ -130,6 +130,92 @@ pub fn list_pids() -> Vec<u32> {
         }
     }
     pids
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct GpuInfo {
+    pub name: String,
+    pub util_pct: u8,
+    pub vram_used_mb: u64,
+    pub vram_total_mb: u64,
+    pub temp_c: Option<u32>,
+}
+
+fn sysfs_u64(path: &Path) -> Option<u64> {
+    fs::read_to_string(path).ok()?.trim().parse().ok()
+}
+
+fn sysfs_str(path: &Path) -> Option<String> {
+    Some(fs::read_to_string(path).ok()?.trim().to_string())
+}
+
+fn gpu_temp(device: &Path) -> Option<u32> {
+    for entry in fs::read_dir(device.join("hwmon")).ok()?.flatten() {
+        if let Some(v) = sysfs_u64(&entry.path().join("temp1_input")) {
+            return Some((v / 1000) as u32);
+        }
+    }
+    None
+}
+
+pub fn read_gpus() -> Vec<GpuInfo> {
+    let gpus = read_gpus_sysfs();
+    if !gpus.is_empty() { return gpus; }
+    read_gpus_nvidia_smi()
+}
+
+fn read_gpus_sysfs() -> Vec<GpuInfo> {
+    let mut gpus = Vec::new();
+    let Ok(dir) = fs::read_dir("/sys/class/drm") else { return gpus };
+
+    let mut cards: Vec<_> = dir.flatten()
+        .filter(|e| {
+            let n = e.file_name();
+            let s = n.to_string_lossy();
+            s.starts_with("card") && s.len() > 4 && s[4..].chars().all(|c| c.is_ascii_digit())
+        })
+        .collect();
+    cards.sort_by_key(|e| e.file_name());
+
+    for (idx, card) in cards.iter().enumerate() {
+        let dev = card.path().join("device");
+        let util_pct   = sysfs_u64(&dev.join("gpu_busy_percent")).unwrap_or(0) as u8;
+        let vram_used  = sysfs_u64(&dev.join("mem_info_vram_used")).unwrap_or(0);
+        let vram_total = sysfs_u64(&dev.join("mem_info_vram_total")).unwrap_or(0);
+        let temp_c     = gpu_temp(&dev);
+
+        if vram_total == 0 && temp_c.is_none() { continue; }
+
+        let name = sysfs_str(&dev.join("product_name"))
+            .unwrap_or_else(|| format!("GPU {}", idx));
+
+        gpus.push(GpuInfo {
+            name,
+            util_pct,
+            vram_used_mb:  vram_used  / 1_048_576,
+            vram_total_mb: vram_total / 1_048_576,
+            temp_c,
+        });
+    }
+    gpus
+}
+
+fn read_gpus_nvidia_smi() -> Vec<GpuInfo> {
+    use std::process::Command;
+    let Ok(out) = Command::new("nvidia-smi")
+        .args(["--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu",
+               "--format=csv,noheader,nounits"])
+        .output() else { return vec![] };
+    let text = String::from_utf8_lossy(&out.stdout);
+    text.lines().filter_map(|line| {
+        let mut it = line.splitn(5, ',');
+        let name         = it.next()?.trim().to_string();
+        let util_pct     = it.next()?.trim().parse::<u8>().ok()?;
+        let vram_used_mb = it.next()?.trim().parse::<u64>().ok()?;
+        let vram_total_mb = it.next()?.trim().parse::<u64>().ok()?;
+        let temp_c       = it.next()?.trim().parse::<u32>().ok();
+        Some(GpuInfo { name, util_pct, vram_used_mb, vram_total_mb, temp_c })
+    }).collect()
 }
 
 // Parses /proc/[pid]/stat — handles comm names with spaces and parentheses
