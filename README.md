@@ -16,18 +16,15 @@
 - [ ] **Disco** — mount points, usage %, read/write I/O rates per device
 - [ ] **Bluetooth** — paired devices, connection status, RSSI, connect/disconnect
 - [ ] **USB** — connected devices, bus/port, vendor/product info
-- [ ] **GPU** — utilization, VRAM usage, temperature (NVIDIA + AMD)
-- [ ] **Temperatura** — CPU/GPU/NVMe sensors via `/sys/class/hwmon`
+- [x] **GPU** — utilization, VRAM usage, temperature (NVIDIA + AMD)
+- [x] **Temperatura** — CPU/GPU/NVMe sensors via `/sys/class/hwmon`
 - [ ] **Logs** — tail of `journalctl` filtered per selected process
 - [ ] **Network per process** — which process is eating your bandwidth
 - [ ] **Containers** — Docker/Podman containers alongside system processes
 
 ## Keybindings
 
-| Key | Action |isco — mount points, usage %, read/write I/O rates per device
-Bluetooth — paired devices, connection status, RSSI, connect/disconnect
-USB — connected devices, bus/port, vendor/product info
-GPU — utilization, VRAM usage, temperature (NVIDIA + AMD)
+| Key | Action |
 |---|---|
 | `Tab` / `Shift+Tab` | Next / previous tab |
 | `j` / `k` or `↓` / `↑` | Navigate list |
