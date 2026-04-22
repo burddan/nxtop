@@ -45,6 +45,14 @@ impl Theme {
         }
     }
 
+    fn temp_color(c: u32) -> Color {
+        match c {
+            0..=59  => Self::OK,
+            60..=79 => Self::WARN,
+            _       => Self::CRIT,
+        }
+    }
+
     fn bar(pct: u16, width: usize) -> String {
         let filled = (pct as usize * width / 100).min(width);
         let bar: String = (0..width).map(|i| if i < filled { '█' } else { '░' }).collect();
@@ -186,13 +194,12 @@ fn draw_processes(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn draw_system(f: &mut Frame, app: &App, area: Rect) {
-    let gpu_height = if app.gpus.is_empty() { 0 } else { (app.gpus.len() * 2 + 2) as u16 };
+    let gpu_height   = if app.gpus.is_empty()   { 0 } else { (app.gpus.len()  * 2 + 2) as u16 };
+    let temp_height  = if app.temps.is_empty()  { 0 } else { (app.temps.len() + 2)     as u16 };
 
-    let constraints: Vec<Constraint> = if app.gpus.is_empty() {
-        vec![Constraint::Min(0), Constraint::Length(3)]
-    } else {
-        vec![Constraint::Min(0), Constraint::Length(3), Constraint::Length(gpu_height)]
-    };
+    let mut constraints = vec![Constraint::Min(0), Constraint::Length(3)];
+    if gpu_height  > 0 { constraints.push(Constraint::Length(gpu_height));  }
+    if temp_height > 0 { constraints.push(Constraint::Length(temp_height)); }
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -244,8 +251,13 @@ fn draw_system(f: &mut Frame, app: &App, area: Rect) {
         ));
     f.render_widget(gauge, chunks[1]);
 
+    let mut chunk_idx = 2usize;
     if !app.gpus.is_empty() {
-        draw_gpu(f, app, chunks[2]);
+        draw_gpu(f, app, chunks[chunk_idx]);
+        chunk_idx += 1;
+    }
+    if !app.temps.is_empty() {
+        draw_temps(f, app, chunks[chunk_idx]);
     }
 }
 
@@ -299,6 +311,29 @@ fn draw_gpu(f: &mut Frame, app: &App, area: Rect) {
                 vram_row,
             );
         }
+    }
+}
+
+fn draw_temps(f: &mut Frame, app: &App, area: Rect) {
+    let block = Theme::block("Temperatura");
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    for (i, t) in app.temps.iter().enumerate() {
+        let y = inner.y + i as u16;
+        if y >= inner.y + inner.height { break; }
+        let row = Rect::new(inner.x, y, inner.width, 1);
+
+        let color    = Theme::temp_color(t.temp_c);
+        let bar      = Theme::bar(t.temp_c.min(100) as u16, 8);
+        let src      = format!("{:<6}", t.source);
+        let label    = format!("{:<22}", t.label);
+        let line     = format!("{}  {}  {:>3}°C  {}", src, label, t.temp_c, bar);
+
+        f.render_widget(
+            Paragraph::new(line).style(Style::default().fg(color).bg(Theme::BG)),
+            row,
+        );
     }
 }
 

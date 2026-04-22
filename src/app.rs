@@ -3,7 +3,7 @@ use std::{
     time::Instant,
 };
 use ratatui::widgets::TableState;
-use crate::proc::{self, CpuStat, GpuInfo, MemInfo, NetSample};
+use crate::proc::{self, CpuStat, GpuInfo, MemInfo, NetSample, TempReading};
 
 const HISTORY: usize = 60;
 const PAGE_BYTES: u64 = 4096;
@@ -41,6 +41,7 @@ pub struct App {
     pub mem: MemInfo,
     pub net: Vec<NetIfaceDisplay>,
     pub gpus: Vec<GpuInfo>,
+    pub temps: Vec<TempReading>,
     prev_cpu: Vec<CpuStat>,
     prev_ticks: HashMap<u32, u64>,
     prev_total: u64,
@@ -64,6 +65,7 @@ impl App {
             mem: MemInfo::default(),
             net: vec![],
             gpus: vec![],
+            temps: vec![],
             prev_cpu: cpu,
             prev_ticks: HashMap::new(),
             prev_total: 0,
@@ -83,6 +85,7 @@ impl App {
         self.update_net(elapsed);
         self.update_procs();
         self.update_gpus();
+        self.update_temps();
     }
 
     fn update_cpu(&mut self) {
@@ -138,6 +141,17 @@ impl App {
             self.gpu_history[i].push_back(gpu.util_pct as u64);
         }
         self.gpus = new;
+    }
+
+    fn update_temps(&mut self) {
+        let mut temps = proc::read_temps();
+        for gpu in &self.gpus {
+            if let Some(t) = gpu.temp_c {
+                let short = gpu.name.chars().take(20).collect();
+                temps.push(TempReading { source: "gpu".into(), label: short, temp_c: t });
+            }
+        }
+        self.temps = temps;
     }
 
     fn update_procs(&mut self) {

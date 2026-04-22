@@ -132,6 +132,46 @@ pub fn list_pids() -> Vec<u32> {
     pids
 }
 
+#[derive(Debug, Clone)]
+pub struct TempReading {
+    pub source: String,
+    pub label: String,
+    pub temp_c: u32,
+}
+
+pub fn read_temps() -> Vec<TempReading> {
+    let mut temps = Vec::new();
+    let Ok(dir) = fs::read_dir("/sys/class/hwmon") else { return temps };
+
+    let mut entries: Vec<_> = dir.flatten().collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        let name = sysfs_str(&path.join("name")).unwrap_or_default();
+        match name.as_str() {
+            "coretemp" => {
+                for i in 1..=32u32 {
+                    let input = path.join(format!("temp{}_input", i));
+                    let Some(mc) = sysfs_u64(&input) else { continue };
+                    let label = sysfs_str(&path.join(format!("temp{}_label", i))).unwrap_or_default();
+                    if label.starts_with("Package") {
+                        temps.push(TempReading { source: "cpu".into(), label, temp_c: (mc / 1000) as u32 });
+                    }
+                }
+            }
+            "nvme" => {
+                if let Some(mc) = sysfs_u64(&path.join("temp1_input")) {
+                    let label = sysfs_str(&path.join("temp1_label")).unwrap_or_else(|| "Composite".into());
+                    temps.push(TempReading { source: "nvme".into(), label, temp_c: (mc / 1000) as u32 });
+                }
+            }
+            _ => {}
+        }
+    }
+    temps
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct GpuInfo {
     pub name: String,
