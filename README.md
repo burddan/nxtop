@@ -1,15 +1,7 @@
 # nxtop
 
-`nxtop` is a TUI system monitor built in Rust that goes far beyond `htop`. Instead of opening five different tools to understand what your machine is doing, `nxtop` puts processes, CPU, memory, disks, network, Bluetooth, and more into a single keyboard-driven interface.`
-
-
-## Current Features
-
-| Tab | What you get |
-|---|---|
-| **Processos** | Process list with CPU%, memory, threads, state. Filter by name/PID, tree view, kill |
-| **Sistema** | Per-core CPU sparklines (60s history) + RAM gauge |
-| **Rede** | Per-interface RX/TX rates and totals |
+nxtop is a TUI system monitor built in Rust that covers everything — CPU, memory, disks, network, Bluetooth and more, all with vim keybinds.
+it's a personal project to learn how Linux APIs and Rust libraries actually work, but it's functional and you can try it out :)
 
 ## Roadmap
 
